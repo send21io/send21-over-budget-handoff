@@ -1,0 +1,20 @@
+{
+  "event": "draft.amount_mismatch",
+  "data": {
+    "draftId": "00000000-0000-4000-8000-000000000001",
+    "status": "AwaitingPayment",
+    "txId": "mock-tx",
+    "confirmations": 1,
+    "receivedAmountSats": 1450000,
+    "receivedAmount": "1.450000",
+    "sentCurrency": "USDC",
+    "network": "Base",
+    "amountSats": 1500000,
+    "sentAmount": "1.500000",
+    "fiatCurrency": "USD",
+    "fiatAmount": 1.50,
+    "paymentRequestId": "demo-0001",
+    "orderId": "run-demo-step-4",
+    "occurredAt": "2026-10-10T12:00:00Z"
+  }
+}
