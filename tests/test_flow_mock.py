@@ -8,7 +8,7 @@ from handoff.send21_client import MockSend21Client, validate
 from handoff.store import Store
 from handoff.webhook import make_server
 
-KEYS = {"fiatCurrency", "fiatAmount", "options", "orderId", "memo", "expiryHours", "idempotencyKey"}
+KEYS = {"fiatCurrency", "fiatAmount", "options", "orderId", "memo", "expiryHours", "idempotencyKey", "declineNote"}
 
 
 def setup(monkeypatch):
@@ -31,6 +31,7 @@ def test_interrupts_at_handoff(monkeypatch):
     tool, args = client.calls[0]
     assert tool == "create_payment_request" and set(args) == KEYS
     assert args["fiatAmount"] == 1.5 and args["expiryHours"] is None
+    assert args["declineNote"].startswith("The agent stops before step")
     assert args["options"][0] == {"currency": "Usdc", "network": "Base", "address": "<mock-payee-address>"}
 
 

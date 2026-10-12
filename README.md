@@ -12,7 +12,7 @@ This is an example. It is **not an official LangGraph integration**, and not a l
 
 1. The agent runs a task under a budget (demo: spent 4.20 of 5.00 USD).
 2. The next step costs 1.50 USD. 4.20 + 1.50 > 5.00, so the budget guard says "handoff" and the step does not run.
-3. The agent calls the send21 MCP tool `create_payment_request` (amount, payee address, memo, `orderId`), gets back `id` and `payPath`, prints the pay link `https://send21.io` + `payPath`, and pauses (LangGraph `interrupt()`).
+3. The agent calls the send21 MCP tool `create_payment_request` (amount, payee address, memo, `orderId`, and a `declineNote` the pay page shows as "If you don't pay:"), gets back `id` and `payPath`, prints the pay link `https://send21.io` + `payPath`, and pauses (LangGraph `interrupt()`).
 4. A human opens the link and signs in their own wallet. send21 prepares the payment instructions; funds go straight from the payer's wallet to the receiver's wallet. send21 never holds keys or funds, never signs and never broadcasts.
 5. send21 sends an HMAC-signed `draft.confirmed` webhook. The receiver checks the signature, ignores repeated deliveries, matches `orderId` to the paused run and resumes it (`Command(resume=...)`). The cap is raised by the confirmed amount and the task completes.
 

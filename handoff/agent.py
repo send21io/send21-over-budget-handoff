@@ -69,6 +69,8 @@ def request_handoff(*, cfg: Config, store: Store, client, run_id: str, guard: Bu
         address=cfg.payee_address, order_id=order_id, idempotency_key=key,
         memo=f"Agent over budget: step '{step.name}' needs {amount} {guard.currency} "
              f"(spent {guard.spent} of {guard.cap})",
+        # Tells the human what "no" means, so declining is an informed choice.
+        decline_note=f"The agent stops before step '{step.name}' and the run ends without it."[:200],
     )
     log(f"[send21] create_payment_request fiatAmount={amount} {guard.currency}")
     log(f"         orderId={order_id} options=[{cfg.payee_currency}/{cfg.payee_network}]")

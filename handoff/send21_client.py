@@ -3,7 +3,7 @@
 Verified against github.com/send21io/send21-examples (mcp-payment-request):
 - endpoint https://send21.io/mcp, Streamable HTTP, Authorization: Bearer <key>
 - tool create_payment_request with fiatCurrency, fiatAmount, options[{currency,network,address,method?}],
-  orderId, memo, expiryHours, idempotencyKey (all keys sent, null for optional ones)
+  orderId, memo, expiryHours, idempotencyKey, declineNote (all keys sent, null for optional ones)
 - result content[0].text is JSON with id and payPath; pay link = https://send21.io + payPath
 
 UNVERIFIED: argument and response shapes of get_payment_request and get_rate. They are
@@ -26,7 +26,8 @@ def pay_link(pay_path: str) -> str:
 
 
 def build_create_args(*, amount: Decimal, fiat_currency: str, currency: str, network: str, address: str,
-                      order_id: str, memo: str, idempotency_key: str, expiry_hours: int | None = None) -> dict:
+                      order_id: str, memo: str, idempotency_key: str, expiry_hours: int | None = None,
+                      decline_note: str | None = None) -> dict:
     return {
         "fiatCurrency": fiat_currency.upper(),
         "fiatAmount": float(amount),
@@ -35,6 +36,8 @@ def build_create_args(*, amount: Decimal, fiat_currency: str, currency: str, net
         "memo": memo,
         "expiryHours": expiry_hours,
         "idempotencyKey": idempotency_key,
+        # Shown on the pay page under the amount as "If you don't pay:" (max 200 characters).
+        "declineNote": decline_note,
     }
 
 
