@@ -1,9 +1,13 @@
 """send21 webhook receiver.
 
 Verified against github.com/send21io/send21-examples (webhook-receiver/verify.js, server.js):
-- X-Send21-Signature: sha256=<lowercase hex HMAC-SHA256 of the raw body, keyed with the signing secret>
-- X-Send21-Event (event name), X-Send21-Delivery (delivery id, reused on retries)
-- no timestamp header is documented, so there is no timestamp window
+- X-Send21-Signature-V2 (verify this one): t=<timestamp>,v1=<lowercase hex HMAC-SHA256 of
+  "<timestamp>.<delivery id>.<raw body>", keyed with the signing secret>. The time and delivery id
+  are signed too, so deliveries older than 5 minutes are refused and a copied delivery cannot be replayed.
+- X-Send21-Signature (legacy, still sent for compatibility): sha256=<lowercase hex HMAC-SHA256 of the
+  raw body only>. Used only as a fallback when no V2 header is present.
+- X-Send21-Event (event name), X-Send21-Delivery (delivery id, reused on retries),
+  X-Send21-Timestamp (Unix seconds, same as t=)
 - any 2xx counts as delivered; deliveries can be retried and arrive out of order
 """
 from __future__ import annotations
@@ -12,12 +16,16 @@ import hashlib
 import hmac
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable
 
 from .store import Store
 
+SIGNATURE_V2_HEADER = "X-Send21-Signature-V2"
 SIGNATURE_HEADER = "X-Send21-Signature"
+TIMESTAMP_HEADER = "X-Send21-Timestamp"
+TOLERANCE_SECONDS = 5 * 60
 EVENT_HEADER = "X-Send21-Event"
 DELIVERY_HEADER = "X-Send21-Delivery"
 MAX_BODY_BYTES = 1024 * 1024
@@ -26,21 +34,62 @@ PATH = "/webhooks/send21"
 ResumeFn = Callable[[str, dict], None]
 
 
+def sign_v2(raw: bytes, delivery_id: str, timestamp: int | str, secret: str) -> str:
+    """X-Send21-Signature-V2 value: t=<timestamp>,v1=<hex HMAC-SHA256 of "<timestamp>.<delivery id>.<raw body>">."""
+    mac = hmac.new(secret.encode(), f"{timestamp}.{delivery_id}.".encode() + raw, hashlib.sha256).hexdigest()
+    return f"t={timestamp},v1={mac}"
+
+
+def verify_signature_v2(raw: bytes, header: str | None, delivery_id: str | None, secret: str,
+                        now: float | None = None, tolerance: int = TOLERANCE_SECONDS) -> bool:
+    """Constant-time V2 check, refusing deliveries more than 5 minutes from now. Never raises."""
+    if not secret or not isinstance(header, str) or not isinstance(delivery_id, str) or not delivery_id:
+        return False
+    parts = {}
+    for part in header.split(","):
+        k, sep, v = part.partition("=")
+        if sep:
+            parts[k.strip()] = v.strip()
+    t, v1 = parts.get("t", ""), parts.get("v1", "")
+    if not t.isdigit() or not v1:
+        return False
+    if abs((time.time() if now is None else now) - int(t)) > tolerance:
+        return False
+    expected = sign_v2(raw, delivery_id, t, secret).split(",v1=", 1)[1]
+    return hmac.compare_digest(expected.encode(), v1.encode())
+
+
 def sign(raw: bytes, secret: str) -> str:
+    """Legacy X-Send21-Signature value (raw body only, no timestamp)."""
     return "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
 
 
 def verify_signature(raw: bytes, header: str | None, secret: str) -> bool:
+    """Legacy check of X-Send21-Signature. Prefer verify_signature_v2."""
     if not secret or not isinstance(header, str):
         return False
     return hmac.compare_digest(sign(raw, secret).encode(), header.encode())
 
 
+def verify_delivery(raw: bytes, headers: dict, secret: str, allow_legacy: bool = True,
+                    now: float | None = None) -> tuple[bool, str | None]:
+    """V2 first; the legacy header only when no V2 header is sent. Returns (valid, scheme)."""
+    h = {k.lower(): v for k, v in headers.items()}
+    v2 = h.get(SIGNATURE_V2_HEADER.lower())
+    if v2 is not None:
+        return verify_signature_v2(raw, v2, h.get(DELIVERY_HEADER.lower()), secret, now=now), "v2"
+    legacy = h.get(SIGNATURE_HEADER.lower())
+    if allow_legacy and legacy is not None:
+        return verify_signature(raw, legacy, secret), "v1"
+    return False, None
+
+
 def handle_delivery(store: Store, raw: bytes, headers: dict, secret: str,
                     resume: ResumeFn, log: Callable[[str], None] = print) -> tuple[int, dict]:
     h = {k.lower(): v for k, v in headers.items()}
-    if not verify_signature(raw, h.get(SIGNATURE_HEADER.lower()), secret):
-        log("[webhook] rejected: missing or invalid signature")
+    valid, scheme = verify_delivery(raw, h, secret)
+    if not valid:
+        log(f"[webhook] rejected: missing, expired or invalid signature ({scheme or 'none'})")
         return 401, {"error": "invalid signature"}
     try:
         payload = json.loads(raw.decode("utf-8"))

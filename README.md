@@ -43,7 +43,8 @@ Live mode uses mainnet networks. Use a small amount. See "Unverified" below abou
 
 ## Webhook verification
 
-- Header `X-Send21-Signature: sha256=<lowercase hex HMAC-SHA256 of the raw body>`, keyed with the endpoint signing secret. Checked on the raw bytes before parsing, in constant time.
+- Header `X-Send21-Signature-V2: t=<timestamp>,v1=<lowercase hex HMAC-SHA256 of "<timestamp>.<delivery id>.<raw body>">`, keyed with the endpoint signing secret, is checked first, on the raw bytes before parsing, in constant time. Deliveries older than 5 minutes are refused, so a copied delivery cannot be replayed.
+- The legacy `X-Send21-Signature: sha256=<lowercase hex HMAC-SHA256 of the raw body>` (no timestamp) is still sent for compatibility and is used only as a fallback when no V2 header is present.
 - `X-Send21-Delivery` is stored; a repeated delivery returns 200 and does nothing.
 - Run status only moves forward, so late or out-of-order events cannot undo a resume.
 - `draft.confirmed` resumes. `draft.amount_mismatch` marks the run for human review and does not resume. `draft.seen` is logged only.
