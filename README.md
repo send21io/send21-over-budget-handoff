@@ -36,6 +36,7 @@ Mock mode uses a fake send21 client (pay link `https://send21.io/p/demo-0001`) a
 1. Create an API key at https://send21.io/api-keys with the `drafts:write` scope only.
 2. Create a webhook endpoint in send21 pointing at `https://<your-public-host>/webhooks/send21` and keep the signing secret.
 3. `cp .env.example .env` and fill in `SEND21_API_KEY`, `SEND21_WEBHOOK_SECRET`, `PAYEE_ADDRESS` (your own receiving address).
+   - 🔐 **Approve your receiving address in send21.** New send21 accounts (created on or after 20 Oct 2026) only accept receiving addresses the owner approved, including Lightning addresses. Add `PAYEE_ADDRESS` in the send21 app, or propose it from an agent (MCP `propose_receiving_address`), then sign in and approve it with a passkey or authenticator code. No API key can approve an address. Older accounts can opt in under Settings.
 4. Expose `WEBHOOK_PORT` with any tunnel, then `python scripts/run_demo.py --live`.
 5. Open the printed pay link and pay from your own wallet.
 
@@ -50,6 +51,11 @@ Live mode uses mainnet networks. Use a small amount. See "Unverified" below abou
 - `draft.confirmed` resumes. `draft.amount_mismatch` marks the run for human review and does not resume. `draft.seen` is logged only.
 
 Details follow https://github.com/send21io/send21-examples (`examples/webhook-receiver`) and the Webhooks section at https://send21.io/swagger.
+
+## Troubleshooting
+
+- **422 `address_not_approved`:** the receiving address isn't approved in your send21 account, so nothing was created. Sign in to send21, approve the address (passkey or authenticator code), then try again.
+- **403 `owner_not_confirmed`:** an agent created the account and the owner hasn't taken it over yet. The owner opens the emailed link and sets up a passkey or password.
 
 ## Layout
 

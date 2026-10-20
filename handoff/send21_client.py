@@ -20,6 +20,18 @@ from urllib.parse import urljoin
 SITE_URL = "https://send21.io"
 TOOLS = ("create_payment_request", "get_payment_request", "get_rate")
 
+# send21 MCP 1.5.0: new accounts only use receiving addresses the owner approved,
+# and an agent-created account creates nothing until the owner takes it over.
+# https://send21.io/docs/mcp
+SEND21_ERRORS = {
+    "address_not_approved": "422 address_not_approved: this receiving address is not approved in your send21 account, so nothing was created. Approve it in send21 (signed in, with a passkey or authenticator code), or propose it with propose_receiving_address and have the owner approve it, then retry.",
+    "owner_not_confirmed": "403 owner_not_confirmed: the owner has not taken over this agent-created send21 account yet, so nothing can be created. The owner opens the emailed link and sets up a passkey or password first.",
+}
+
+
+def explain_send21_error(text: str) -> str | None:
+    return next((msg for code, msg in SEND21_ERRORS.items() if code in (text or "")), None)
+
 
 def pay_link(pay_path: str) -> str:
     return urljoin(SITE_URL, pay_path)
@@ -122,7 +134,7 @@ class Send21MCPClient:
                 result = await session.call_tool(tool, args)
                 text = "\n".join(c.text for c in result.content if getattr(c, "type", "") == "text")
                 if result.isError:
-                    raise RuntimeError(text or f"{tool} failed")
+                    raise RuntimeError(explain_send21_error(text) or text or f"{tool} failed")
                 return json.loads(text)
 
     def call(self, tool: str, args: dict) -> dict:
