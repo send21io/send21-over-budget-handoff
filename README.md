@@ -1,5 +1,7 @@
 # send21-over-budget-handoff
 
+[send21](https://send21.io/): Crypto pay links and API for people and AI agents.
+
 An AI agent with a hard spend cap hands off to a human instead of overspending.
 
 ![Over-budget handoff, mock mode](docs/over-budget-handoff.gif)
