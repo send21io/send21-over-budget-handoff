@@ -31,7 +31,7 @@ python scripts/run_demo.py --mock
 pytest
 ```
 
-Mock mode uses a fake send21 client (pay link `https://send21.io/p/demo-0001`) and posts a fake `draft.confirmed` webhook to the local receiver, signed with a local secret. Output is the same every run.
+Mock mode uses a fake send21 client (pay link `https://send21.io/demo`, id `demo-0001`) and posts a fake `draft.confirmed` webhook to the local receiver, signed with a local secret. Output is the same every run.
 
 ## Live mode
 
@@ -52,7 +52,7 @@ Live mode uses mainnet networks. Use a small amount. See "Unverified" below abou
 - Run status only moves forward, so late or out-of-order events cannot undo a resume.
 - `draft.confirmed` resumes. `draft.amount_mismatch` marks the run for human review and does not resume. `draft.seen` is logged only.
 
-Details follow https://github.com/send21io/send21-examples (`examples/webhook-receiver`) and the Webhooks section at https://send21.io/swagger.
+Details follow the Webhooks section at https://send21.io/swagger and the `examples/webhook-receiver` sample in https://github.com/send21io/send21-examples for reference.
 
 ## Troubleshooting
 

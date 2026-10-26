@@ -25,7 +25,7 @@ def test_interrupts_at_handoff(monkeypatch):
     runner.start("run-demo")
     run = store.get_run("run-demo")
     assert run["status"] == "paused"
-    assert run["pay_link"] == "https://send21.io/p/demo-0001"
+    assert run["pay_link"] == "https://send21.io/demo"
     assert run["order_id"] == "run-demo-step-4"
     assert "[paused] waiting for human signature" in lines
     tool, args = client.calls[0]

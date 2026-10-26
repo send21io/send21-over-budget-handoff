@@ -106,7 +106,7 @@ class MockSend21Client:
             key = args["idempotencyKey"]
             if key not in self._by_key:  # same key returns the same request, like the real API
                 n = len(self._by_key) + 1
-                self._by_key[key] = {"id": f"demo-{n:04d}", "payPath": f"/p/demo-{n:04d}", "status": "mock"}
+                self._by_key[key] = {"id": f"demo-{n:04d}", "payPath": "/demo", "status": "mock"}
             return dict(self._by_key[key])
         return {"mock": True, "tool": tool}
 
